@@ -1,0 +1,174 @@
+-- Module Script
+local AntiCheatSystem = {}
+
+local Whitelist = {
+	28430769331, -- Add user IDs of whitelisted players here
+}
+
+local RunService = game:GetService("RunService")
+
+-- Initialize anti-cheat monitoring for a player
+function AntiCheatSystem.Initialize(player, character)
+	print(player.Name .. " has joined and is being monitored.")
+
+	-- Create a folder to store monitoring values
+	local monitoringFolder = Instance.new("Folder", player)
+	monitoringFolder.Name = "AntiCheatMonitor"
+
+	-- Create a flag for auto-detection
+	local auto_Detection_Enabled = Instance.new("BoolValue", monitoringFolder)
+	auto_Detection_Enabled.Value = character ~= nil
+	auto_Detection_Enabled.Name = "Auto_Detection_Enabled"
+end
+
+-- Monitor a player's character for violations
+function AntiCheatSystem.MonitorCharacter(player, character, flaggedReason)
+	local Restricted = character:FindFirstChild("ClientModule")
+	
+	if not Restricted then
+		player.AntiCheatMonitor.Auto_Detection_Enabled.Value = false
+		player:Kick("Unauthorized Tampering", "Access: "..player.AntiCheatMonitor.Auto_Detection_Enabled.Value)
+	end
+end
+
+-- Detect violations, but skip if player is whitelisted
+function AntiCheatSystem.Detect(player, violationType)
+	-- Check if player is in the whitelist
+	if not table.find(Whitelist, player.UserId) then
+		if violationType == "Speed" then
+			AntiCheatSystem.HandleSpeedViolation(player)
+		elseif violationType == "Jump" then
+			AntiCheatSystem.HandleJumpViolation(player)
+		elseif violationType == "NoClip" then
+			AntiCheatSystem.HandleNoClipViolation(player)
+		elseif violationType == "Gui" then
+			AntiCheatSystem.HandleGuiViolation(player)
+		elseif violationType == "GodMode" then
+			AntiCheatSystem.HandleHealthViolation(player)
+		elseif violationType == "Tool" then
+			AntiCheatSystem.HandleToolViolation(player)
+		elseif violationType == "Instance" then
+			AntiCheatSystem.HandleInstancesViolation(player)
+		elseif violationType == "Remote" then
+			AntiCheatSystem.HandleRemotesViolation(player)
+		else
+			warn("Unknown violation type: " .. violationType)
+		end
+	else
+		-- Print if the player is whitelisted
+		print(player.Name .. " is whitelisted, no action taken.")
+	end
+end
+
+local function StudioShowcase(player, violationType)
+	player:Kick(violationType .. " was Detected.")
+end
+
+-- Handle speed violations
+function AntiCheatSystem.HandleSpeedViolation(player)
+	local violationType = "Unauthorized Tampering with Humanoid"
+	warn(player.Name .. " triggered a speed violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle jump violations
+function AntiCheatSystem.HandleJumpViolation(player)
+	local violationType = "Unauthorized Tampering with Humanoid"
+	warn(player.Name .. " triggered a jump violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle NoClip violations
+function AntiCheatSystem.HandleNoClipViolation(player)
+	local violationType = "Unauthorized Tampering with Character"
+	warn(player.Name .. " triggered a NoClip violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle unauthorized GUI violations
+function AntiCheatSystem.HandleGuiViolation(player)
+	local violationType = "Unauthorized Gui"
+	warn(player.Name .. " triggered an Unauthorized Gui violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle Health violations
+function AntiCheatSystem.HandleHealthViolation(player)
+	local violationType = "Unauthorized Tampering with Health"
+	warn(player.Name .. " triggered an GodMode violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle unauthorized Tool violations
+function AntiCheatSystem.HandleToolViolation(player)
+	local violationType = "Unauthorized Tool"
+	warn(player.Name .. " triggered an Unauthorized Tool violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle unauthorized Instances violations
+function AntiCheatSystem.HandleInstancesViolation(player)
+	local violationType = "Unauthorized Instances"
+	warn(player.Name .. " triggered an Unauthorized Instances violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle unauthorized Instances violations
+function AntiCheatSystem.HandleRemotesViolation(player)
+	local violationType = "Unauthorized Remote"
+	warn(player.Name .. " triggered an Unauthorized Remote violation.")
+	StudioShowcase(player, violationType)
+end
+
+-- Handle general tampering violations
+function AntiCheatSystem.HandleViolation(player)
+	local violationType = "Unauthorized Tampering"
+	warn(player.Name .. " tampering detected.")
+	StudioShowcase(player, violationType)
+end
+
+return AntiCheatSystem
+
+
+-- Server Script
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local AntiCheatModule = require(ReplicatedStorage.ModuleScripts.AntiCheatSystem)
+local GameWhitelist = require(ReplicatedStorage.ModuleScripts.ServerFunction)
+local Remotes = ReplicatedStorage.Remotes
+
+-- Initialize anti-cheat monitoring when a player joins
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		
+		GameWhitelist.Access(player)
+		
+		AntiCheatModule.Initialize(player, character)
+		
+		while task.wait(1) do
+			AntiCheatModule.MonitorCharacter(player, character, "Checking.")
+			local Backup = script:WaitForChild("Backup"):Clone()
+			Backup.Parent = character
+			Backup.Enabled = true
+			task.wait(3)
+			Backup:Destroy()
+		end
+	end)
+end)
+
+Remotes.Detect.OnServerEvent:Connect(function(player, cheatType)
+	AntiCheatModule.Detect(player, cheatType)
+end)
+
+
+-- Client Script
+local user = game.Players.LocalPlayer
+for _, item in pairs(script.Parent:GetDescendants()) do
+	if item:IsA("LocalScript") and item.Name == "ClientModule" then
+		return true
+	end
+end
+
+user:Kick("Unauthorized Tampering.")
+return false
